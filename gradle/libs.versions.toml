@@ -1,6 +1,6 @@
 [versions]
 kotest = "5.8.0"
-log4j = "2.20.0"
+log4j = "2.21.1"
 slf4j = "2.0.9"
 
 [libraries]
