@@ -3,4 +3,4 @@ plugins {
 }
 
 rootProject.name = "kosmo"
-include("backend", "frontend")
+include("backend")

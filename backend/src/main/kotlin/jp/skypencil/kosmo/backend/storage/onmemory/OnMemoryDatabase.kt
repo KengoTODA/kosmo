@@ -2,7 +2,9 @@ package jp.skypencil.kosmo.backend.storage.onmemory
 
 import jp.skypencil.kosmo.backend.storage.shared.Table
 import jp.skypencil.kosmo.backend.storage.shared.Database
+import org.koin.core.annotation.Singleton
 
+@Singleton
 class OnMemoryDatabase : Database {
     private val tables = mutableMapOf<String, OnMemoryTable>()
     override suspend fun findTable(name: String): Table =
