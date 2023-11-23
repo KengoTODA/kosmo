@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.matchers.shouldBe
 import jp.skypencil.kosmo.backend.value.LogEntry
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class DummyLogEntry(private val int: Int) : LogEntry {
     override fun toJson(): String = "{\"int\": $int}"
@@ -12,7 +12,7 @@ class DummyLogEntry(private val int: Int) : LogEntry {
 
 class LogWriterSpec : DescribeSpec({
     describe("LogWriter") {
-        it("create a log file under the given dir") {
+        it("creates a log file under the given dir") {
             val logDir = tempdir()
             LogWriter(logDir.toPath()).use {
                 // nothing to do
@@ -22,11 +22,11 @@ class LogWriterSpec : DescribeSpec({
         it("rotates log file when many lines had been written") {
             val logDir = tempdir()
             LogWriter(logDir.toPath()).use { logWriter ->
-                launch {
+                runBlocking {
                     (1..1_000).forEach {
                         logWriter.write(DummyLogEntry(it))
                     }
-                }.join()
+                }
             }
             logDir.listFiles { file -> file.isFile }!!.size shouldBe 2
         }
