@@ -2,6 +2,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("com.diffplug.spotless")
     id("com.google.devtools.ksp")
+    id("test-report-aggregation")
 }
 
 sourceSets.main {
@@ -28,11 +29,7 @@ dependencies {
     ksp("io.insert-koin:koin-ksp-compiler:$koinKsp")
     testImplementation("io.kotest:kotest-assertions-core:$kotest")
     testImplementation("io.kotest:kotest-property:$kotest")
-    testRuntimeOnly("io.kotest:kotest-runner-junit5:$kotest")
-}
-
-tasks.named<Test>("test") {
-    useJUnitPlatform()
+    testImplementation("io.kotest:kotest-runner-junit5:$kotest")
 }
 
 tasks.withType<Test>().configureEach {

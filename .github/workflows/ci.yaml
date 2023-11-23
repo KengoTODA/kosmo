@@ -19,11 +19,11 @@ jobs:
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --scan
+          arguments: build testAggregateTestReport --scan --continue
           dependency-graph: generate-and-submit
       - name: Upload build reports
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: build-reports
-          path: build/reports/
+          path: backend/build/reports
