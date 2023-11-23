@@ -35,3 +35,12 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
+
+spotless {
+    kotlinGradle {
+        ktlint()
+    }
+    kotlin {
+        ktlint()
+    }
+}

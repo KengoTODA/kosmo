@@ -8,6 +8,8 @@ import jp.skypencil.kosmo.backend.value.RowId
  */
 interface StorageEngine {
     suspend fun find(id: RowId): Row
+
     suspend fun tableScan(): Sequence<Row>
+
     suspend fun indexScan(): Sequence<Row>
 }
