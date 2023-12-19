@@ -21,7 +21,7 @@ java {
 }
 
 val kotest = "5.8.0"
-val koin = "3.5.0"
+val koin = "3.5.3"
 val koinKsp = "1.3.0"
 dependencies {
     implementation("io.insert-koin:koin-core:$koin")
