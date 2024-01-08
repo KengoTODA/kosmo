@@ -1,7 +1,7 @@
 [versions]
 kotest = "5.8.0"
 log4j = "2.22.1"
-slf4j = "2.0.9"
+slf4j = "2.0.11"
 
 [libraries]
 kotest-runner-juni5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
