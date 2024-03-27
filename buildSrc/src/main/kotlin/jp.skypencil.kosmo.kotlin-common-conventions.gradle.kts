@@ -1,3 +1,5 @@
+import java.util.Scanner
+
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("com.diffplug.spotless")
@@ -16,7 +18,10 @@ repositories {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        Scanner(file("$rootDir/.java-version")).use { scanner ->
+            val version = scanner.nextInt()
+            languageVersion.set(JavaLanguageVersion.of(version))
+        }
     }
 }
 
