@@ -7,6 +7,9 @@ plugins {
     id("test-report-aggregation")
 }
 
+fun libs(lib: String) =
+    project.extensions.getByType<VersionCatalogsExtension>().named("libs").findLibrary(lib).get()
+
 sourceSets.main {
     // KSP - To use generated sources
     java.srcDirs("build/generated/ksp/main/kotlin")
@@ -25,16 +28,13 @@ java {
     }
 }
 
-val kotest = "5.8.1"
-val koin = "3.5.3"
-val koinKsp = "1.3.1"
 dependencies {
-    implementation("io.insert-koin:koin-core:$koin")
-    compileOnly("io.insert-koin:koin-annotations:$koinKsp")
-    ksp("io.insert-koin:koin-ksp-compiler:$koinKsp")
-    testImplementation("io.kotest:kotest-assertions-core:$kotest")
-    testImplementation("io.kotest:kotest-property:$kotest")
-    testImplementation("io.kotest:kotest-runner-junit5:$kotest")
+    implementation(libs("koin-core"))
+    compileOnly(libs("koin-annotations"))
+    ksp(libs("koin-ksp-compiler"))
+    testImplementation(libs("kotest-assertions-core"))
+    testImplementation(libs("kotest-property"))
+    testImplementation(libs("kotest-runner-junit5"))
 }
 
 tasks.withType<Test>().configureEach {
