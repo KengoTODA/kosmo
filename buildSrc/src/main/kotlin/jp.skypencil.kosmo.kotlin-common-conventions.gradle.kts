@@ -22,7 +22,7 @@ java {
 
 val kotest = "5.8.0"
 val koin = "3.5.0"
-val koinKsp = "1.3.0"
+val koinKsp = "1.3.1"
 dependencies {
     implementation("io.insert-koin:koin-core:$koin")
     compileOnly("io.insert-koin:koin-annotations:$koinKsp")
