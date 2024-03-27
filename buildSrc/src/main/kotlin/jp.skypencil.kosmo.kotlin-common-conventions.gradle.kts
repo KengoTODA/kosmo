@@ -20,7 +20,7 @@ java {
     }
 }
 
-val kotest = "5.8.0"
+val kotest = "5.8.1"
 val koin = "3.5.0"
 val koinKsp = "1.3.1"
 dependencies {
