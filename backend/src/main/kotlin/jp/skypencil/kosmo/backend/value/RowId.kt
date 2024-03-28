@@ -13,6 +13,6 @@ data class RowId(private val uuid: UUID) : Comparable<RowId> {
     override fun compareTo(other: RowId): Int = this.uuid.compareTo(other.uuid)
 
     companion object {
-        fun create() = TransactionId(UuidCreator.getTimeOrdered())
+        fun create() = RowId(UuidCreator.getTimeOrdered())
     }
 }
