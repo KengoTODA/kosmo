@@ -16,7 +16,10 @@ class OnMemoryTable(private val name: String) : Table {
     override suspend fun find(
         tx: TransactionId,
         id: RowId,
-    ): Row = checkNotNull(map[id])
+    ): Row =
+        checkNotNull(map[id]) {
+            "指定されたRowId $id はテーブル $name に存在しません"
+        }
 
     override suspend fun tableScan(tx: TransactionId): Sequence<Row> = map.values.stream().asSequence()
 
@@ -24,7 +27,9 @@ class OnMemoryTable(private val name: String) : Table {
         tx: TransactionId,
         row: Row,
     ) {
-        check(map[row.id] == null)
+        check(map[row.id] == null) {
+            "指定されたRow $row はテーブル $name にすでに存在します"
+        }
         map[row.id] = row
     }
 
@@ -37,7 +42,9 @@ class OnMemoryTable(private val name: String) : Table {
         tx: TransactionId,
         row: Row,
     ) {
-        checkNotNull(map[row.id])
+        checkNotNull(map[row.id]) {
+            "指定されたRowId ${row.id} はテーブル $name に存在しません"
+        }
         map[row.id] = row
     }
 }
