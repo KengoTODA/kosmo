@@ -14,14 +14,14 @@ class OnMemoryTable(private val name: String) : Table {
     override fun getName(): String = name
 
     override suspend fun find(
-        transactionId: TransactionId,
+        tx: TransactionId,
         id: RowId,
     ): Row = checkNotNull(map[id])
 
-    override suspend fun tableScan(transactionId: TransactionId): Sequence<Row> = map.values.stream().asSequence()
+    override suspend fun tableScan(tx: TransactionId): Sequence<Row> = map.values.stream().asSequence()
 
     override suspend fun insert(
-        transactionId: TransactionId,
+        tx: TransactionId,
         row: Row,
     ) {
         check(map[row.id] == null)
@@ -29,12 +29,12 @@ class OnMemoryTable(private val name: String) : Table {
     }
 
     override suspend fun delete(
-        transactionId: TransactionId,
+        tx: TransactionId,
         id: RowId,
     ): Boolean = map.remove(id) != null
 
     override suspend fun update(
-        transactionId: TransactionId,
+        tx: TransactionId,
         row: Row,
     ) {
         checkNotNull(map[row.id])
