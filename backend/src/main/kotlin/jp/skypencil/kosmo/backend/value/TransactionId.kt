@@ -6,7 +6,7 @@ import java.util.UUID
 data class TransactionId(private val uuid: UUID) : Comparable<TransactionId> {
     init {
         check(uuid.version() == 6) {
-            "TransactionIdはTime-basedなUUIDである必要があります"
+            "TransactionId should be Time-based UUID"
         }
     }
 

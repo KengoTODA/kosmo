@@ -36,7 +36,7 @@ class OnMemoryTableSpec : DescribeSpec({
         table.insert(tx1, row1)
 
         val exception = shouldThrow<IllegalStateException> { table.find(tx2, row1.id) }
-        exception.message shouldBe "指定された ${row1.id} は $table に存在しません"
+        exception.message shouldBe "$table does not contain ${row1.id}"
     }
     it("can ignore committed data that was not committed when the current tx started") {
         val txManager = TransactionManager()
@@ -48,6 +48,6 @@ class OnMemoryTableSpec : DescribeSpec({
         txManager.commit(tx1)
 
         val exception = shouldThrow<IllegalStateException> { table.find(tx2, row1.id) }
-        exception.message shouldBe "指定された ${row1.id} は $table に存在しません"
+        exception.message shouldBe "$table does not contain ${row1.id}"
     }
 })

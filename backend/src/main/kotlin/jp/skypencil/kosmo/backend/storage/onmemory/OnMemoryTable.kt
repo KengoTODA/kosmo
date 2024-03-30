@@ -6,7 +6,6 @@ import jp.skypencil.kosmo.backend.value.RowId
 import jp.skypencil.kosmo.backend.value.TransactionId
 import kotlin.streams.asSequence
 
-// TODO トランザクション
 // TODO スレッドセーフティ
 class OnMemoryTable(private val name: String, private val transactionManager: TransactionManager) : Table {
     private val map = mutableMapOf<RowId, MutableMap<TransactionId, Row>>()
@@ -14,8 +13,7 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
     override fun getName(): String = name
 
     /**
-     * 指定された[RowId]の歴史を遡り、指定されたトランザクション開始時点の[Row]データ
-     * あるいは指定されたトランザクションによって更新された[Row]データを返す。
+     * @return the effective [Row] for the specified [TransactionId]. null-able.
      */
     private fun snapshotAt(
         current: TransactionId,
@@ -30,30 +28,24 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
         id: RowId,
     ): Row {
         checkNotNull(map[id]) {
-            "指定された $id は $this に存在しません"
+            "$this does not contain $id"
         }
         return checkNotNull(snapshotAt(tx, id)) {
-            "指定された $id は $this に存在しません"
+            "$this does not contain $id"
         }
     }
 
     override suspend fun tableScan(tx: TransactionId): Sequence<Row> =
-        map.values.mapNotNull {
-            it.entries.findLast { entry ->
-                entry.key == tx || entry.key < tx &&
-                    transactionManager.isCommitted(
-                        entry.key,
-                        tx,
-                    )
-            }?.value
-        }.stream().asSequence()
+        map.entries.mapNotNull {
+            snapshotAt(tx, it.key)
+        }.asSequence()
 
     override suspend fun insert(
         tx: TransactionId,
         row: Row,
     ) {
         check(map[row.id] == null) {
-            "指定された $row は $this にすでに存在します"
+            "$this already has $row"
         }
         map[row.id] = mutableMapOf(Pair(tx, row))
     }
@@ -69,7 +61,7 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
     ) {
         val history =
             checkNotNull(map[row.id]) {
-                "指定された ${row.id} は $this に存在しません"
+                "$this does not contain ${row.id}"
             }
         history[tx] = row
     }
