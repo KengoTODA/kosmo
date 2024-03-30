@@ -18,12 +18,11 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
      * あるいは指定されたトランザクションによって更新された[Row]データを返す。
      */
     private fun snapshotAt(
-        tx: TransactionId,
+        current: TransactionId,
         id: RowId,
     ): Row? =
         checkNotNull(map[id]).entries.findLast {
-                entry ->
-            entry.key == tx || entry.key < tx && transactionManager.isCommitted(entry.key)
+            it.key == current || it.key < current && transactionManager.isCommitted(it.key, current)
         }?.value
 
     override suspend fun find(
@@ -39,9 +38,15 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
     }
 
     override suspend fun tableScan(tx: TransactionId): Sequence<Row> =
-        map.values.map {
-            it.entries.findLast { entry -> entry.key == tx || entry.key < tx && transactionManager.isCommitted(entry.key) }?.value
-        }.filterNotNull().stream().asSequence()
+        map.values.mapNotNull {
+            it.entries.findLast { entry ->
+                entry.key == tx || entry.key < tx &&
+                    transactionManager.isCommitted(
+                        entry.key,
+                        tx,
+                    )
+            }?.value
+        }.stream().asSequence()
 
     override suspend fun insert(
         tx: TransactionId,
