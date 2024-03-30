@@ -4,11 +4,10 @@ import jp.skypencil.kosmo.backend.storage.shared.Table
 import jp.skypencil.kosmo.backend.value.Row
 import jp.skypencil.kosmo.backend.value.RowId
 import jp.skypencil.kosmo.backend.value.TransactionId
-import kotlin.streams.asSequence
+import java.util.Collections.synchronizedMap
 
-// TODO スレッドセーフティ
 class OnMemoryTable(private val name: String, private val transactionManager: TransactionManager) : Table {
-    private val map = mutableMapOf<RowId, MutableMap<TransactionId, Row>>()
+    private val map = synchronizedMap(mutableMapOf<RowId, MutableMap<TransactionId, Row>>())
 
     override fun getName(): String = name
 
