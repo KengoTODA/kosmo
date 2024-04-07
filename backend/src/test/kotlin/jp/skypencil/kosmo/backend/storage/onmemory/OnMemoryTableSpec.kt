@@ -50,4 +50,16 @@ class OnMemoryTableSpec : DescribeSpec({
         val exception = shouldThrow<IllegalStateException> { table.find(tx2, row1.id) }
         exception.message shouldBe "$table does not contain ${row1.id}"
     }
+    it("can ignore rollbacked data") {
+        val txManager = TransactionManager()
+        val table = OnMemoryTable("example", txManager)
+        val tx1 = txManager.create()
+        val row1 = Row(RowId.create())
+        table.insert(tx1, row1)
+        txManager.rollback(tx1)
+
+        val tx2 = txManager.create()
+        val exception = shouldThrow<IllegalStateException> { table.find(tx2, row1.id) }
+        exception.message shouldBe "$table does not contain ${row1.id}"
+    }
 })

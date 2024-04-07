@@ -27,4 +27,8 @@ class TransactionManager {
         committed[tx] = newestActiveTransactions()
         activeTransactions.remove(tx)
     }
+
+    fun rollback(tx: TransactionId) {
+        activeTransactions.remove(tx)
+    }
 }
