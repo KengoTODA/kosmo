@@ -30,6 +30,7 @@ class OnMemoryTable(private val name: String) : Table {
         id: RowId,
     ): Row =
         lock.withLock {
+            requireActiveTransaction(tx)
             checkNotNull(map[id]) {
                 "$this does not contain $id"
             }
@@ -40,6 +41,7 @@ class OnMemoryTable(private val name: String) : Table {
 
     override suspend fun tableScan(tx: Transaction): Sequence<Row> =
         lock.withLock {
+            requireActiveTransaction(tx)
             map.entries.mapNotNull {
                 snapshotAt(tx, it.key)
             }.asSequence()
@@ -50,6 +52,7 @@ class OnMemoryTable(private val name: String) : Table {
         row: Row,
     ) {
         lock.withLock {
+            requireActiveTransaction(tx)
             check(map[row.id] == null) {
                 "$this already has $row"
             }
@@ -60,13 +63,18 @@ class OnMemoryTable(private val name: String) : Table {
     override suspend fun delete(
         tx: Transaction,
         id: RowId,
-    ): Boolean = lock.withLock { map.remove(id) != null }
+    ): Boolean =
+        lock.withLock {
+            requireActiveTransaction(tx)
+            map.remove(id) != null
+        }
 
     override suspend fun update(
         tx: Transaction,
         row: Row,
     ) {
         lock.withLock {
+            requireActiveTransaction(tx)
             val history =
                 checkNotNull(map[row.id]) {
                     "$this does not contain ${row.id}"
@@ -76,4 +84,10 @@ class OnMemoryTable(private val name: String) : Table {
     }
 
     override fun toString() = "Table(name=$name)"
+
+    private fun requireActiveTransaction(tx: Transaction) {
+        require(tx.isActive()) {
+            "Given $tx is not active"
+        }
+    }
 }

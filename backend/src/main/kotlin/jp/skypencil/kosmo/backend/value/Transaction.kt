@@ -10,5 +10,7 @@ data class Transaction(val id: TransactionId, private val transactionManager: Tr
         return id == another.id || id < another.id && transactionManager.isCommitted(id, another.id)
     }
 
+    fun isActive(): Boolean = transactionManager.checkActive(this)
+
     override fun toString(): String = "Transaction(id=$id)"
 }
