@@ -3,13 +3,14 @@ package jp.skypencil.kosmo.backend.storage.onmemory
 import jp.skypencil.kosmo.backend.storage.shared.Table
 import jp.skypencil.kosmo.backend.value.Row
 import jp.skypencil.kosmo.backend.value.RowId
+import jp.skypencil.kosmo.backend.value.Transaction
 import jp.skypencil.kosmo.backend.value.TransactionId
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class OnMemoryTable(private val name: String, private val transactionManager: TransactionManager) : Table {
+class OnMemoryTable(private val name: String) : Table {
     private val lock = Mutex()
-    private val map = mutableMapOf<RowId, MutableMap<TransactionId, Row>>()
+    private val map = mutableMapOf<RowId, MutableMap<Transaction, Row>>()
 
     override fun getName(): String = name
 
@@ -17,15 +18,15 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
      * @return the effective [Row] for the specified [TransactionId]. null-able.
      */
     private fun snapshotAt(
-        current: TransactionId,
+        current: Transaction,
         id: RowId,
     ): Row? =
         checkNotNull(map[id]).entries.findLast {
-            it.key == current || it.key < current && transactionManager.isCommitted(it.key, current)
+            it.key.isVisibleFor(current)
         }?.value
 
     override suspend fun find(
-        tx: TransactionId,
+        tx: Transaction,
         id: RowId,
     ): Row =
         lock.withLock {
@@ -37,7 +38,7 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
             }
         }
 
-    override suspend fun tableScan(tx: TransactionId): Sequence<Row> =
+    override suspend fun tableScan(tx: Transaction): Sequence<Row> =
         lock.withLock {
             map.entries.mapNotNull {
                 snapshotAt(tx, it.key)
@@ -45,7 +46,7 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
         }
 
     override suspend fun insert(
-        tx: TransactionId,
+        tx: Transaction,
         row: Row,
     ) {
         lock.withLock {
@@ -57,12 +58,12 @@ class OnMemoryTable(private val name: String, private val transactionManager: Tr
     }
 
     override suspend fun delete(
-        tx: TransactionId,
+        tx: Transaction,
         id: RowId,
     ): Boolean = lock.withLock { map.remove(id) != null }
 
     override suspend fun update(
-        tx: TransactionId,
+        tx: Transaction,
         row: Row,
     ) {
         lock.withLock {

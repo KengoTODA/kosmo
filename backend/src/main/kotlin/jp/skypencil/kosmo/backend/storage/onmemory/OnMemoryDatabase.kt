@@ -7,13 +7,12 @@ import org.koin.core.annotation.Singleton
 @Singleton
 class OnMemoryDatabase : Database {
     private val tables = mutableMapOf<String, OnMemoryTable>()
-    private val transactionManager = TransactionManager()
 
     override suspend fun findTable(name: String): Table = checkNotNull(tables[name])
 
     override suspend fun createTable(name: String): Table {
         require(!tables.containsKey(name))
-        return OnMemoryTable(name, transactionManager).also {
+        return OnMemoryTable(name).also {
             tables[name] = it
         }
     }
