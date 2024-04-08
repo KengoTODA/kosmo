@@ -35,4 +35,6 @@ class TransactionManager {
     fun rollback(tx: Transaction) {
         activeTransactions.remove(tx.id)
     }
+
+    fun checkActive(tx: Transaction): Boolean = activeTransactions.contains(tx.id)
 }
