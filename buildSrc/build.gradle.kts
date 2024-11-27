@@ -9,6 +9,6 @@ repositories {
 
 dependencies {
     implementation("com.diffplug.spotless:spotless-plugin-gradle:6.25.0")
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0")
     implementation("com.google.devtools.ksp:com.google.devtools.ksp.gradle.plugin:2.0.21-1.0.26")
 }
