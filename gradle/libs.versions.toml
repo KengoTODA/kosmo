@@ -1,5 +1,5 @@
 [versions]
-koin = "4.0.0"
+koin = "4.0.4"
 koinKsp = "1.4.0"
 kotest = "5.9.1"
 log4j = "2.24.3"
