@@ -15,4 +15,4 @@ kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.2" }
 log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
-uuid-creator = { module = "com.github.f4b6a3:uuid-creator", version = "6.0.0" }
+uuid-creator = { module = "com.github.f4b6a3:uuid-creator", version = "6.1.1" }
