@@ -18,7 +18,9 @@ import kotlin.io.path.bufferedWriter
  * Write Ahead Log（WAL）を記録する責務を負う。
  */
 @Singleton
-class LogWriter(private val logDir: Path) : Closeable {
+class LogWriter(
+    private val logDir: Path,
+) : Closeable {
     companion object {
         private const val MAX_LINES = 1_000
     }

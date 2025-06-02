@@ -8,7 +8,9 @@ import jp.skypencil.kosmo.backend.value.TransactionId
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-class OnMemoryTable(private val name: String) : Table {
+class OnMemoryTable(
+    private val name: String,
+) : Table {
     private val lock = Mutex()
     private val map = mutableMapOf<RowId, MutableMap<Transaction, Row>>()
 
@@ -21,9 +23,11 @@ class OnMemoryTable(private val name: String) : Table {
         current: Transaction,
         id: RowId,
     ): Row? =
-        checkNotNull(map[id]).entries.findLast {
-            it.key.isVisibleFor(current)
-        }?.value
+        checkNotNull(map[id])
+            .entries
+            .findLast {
+                it.key.isVisibleFor(current)
+            }?.value
 
     override suspend fun find(
         tx: Transaction,
@@ -42,9 +46,10 @@ class OnMemoryTable(private val name: String) : Table {
     override suspend fun tableScan(tx: Transaction): Sequence<Row> =
         lock.withLock {
             requireActiveTransaction(tx)
-            map.entries.mapNotNull {
-                snapshotAt(tx, it.key)
-            }.asSequence()
+            map.entries
+                .mapNotNull {
+                    snapshotAt(tx, it.key)
+                }.asSequence()
         }
 
     override suspend fun insert(
