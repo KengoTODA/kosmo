@@ -2,9 +2,9 @@ package jp.skypencil.kosmo.backend.storage.onmemory
 
 import jp.skypencil.kosmo.backend.storage.shared.Database
 import jp.skypencil.kosmo.backend.storage.shared.Table
-import org.koin.core.annotation.Singleton
+import org.koin.core.annotation.Single
 
-@Singleton
+@Single
 class OnMemoryDatabase : Database {
     private val tables = mutableMapOf<String, OnMemoryTable>()
 

@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.koin.core.annotation.Singleton
+import org.koin.core.annotation.Single
 import java.io.Closeable
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -17,7 +17,7 @@ import kotlin.io.path.bufferedWriter
 /**
  * Write Ahead Log（WAL）を記録する責務を負う。
  */
-@Singleton
+@Single
 class LogWriter(
     private val logDir: Path,
 ) : Closeable {
