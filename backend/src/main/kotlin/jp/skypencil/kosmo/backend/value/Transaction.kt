@@ -10,7 +10,7 @@ data class Transaction(
         check(another.transactionManager == transactionManager) {
             "$another should be managed by the same TransactionManager with $this"
         }
-        return id == another.id || id < another.id && transactionManager.isCommitted(id, another.id)
+        return id == another.id || (id < another.id && transactionManager.isCommitted(id, another.id))
     }
 
     fun isActive(): Boolean = transactionManager.checkActive(this)
