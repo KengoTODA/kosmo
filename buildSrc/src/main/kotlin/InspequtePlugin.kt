@@ -1,13 +1,17 @@
+import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskAction
+import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
 
 /**
@@ -20,13 +24,15 @@ class InspequtePlugin : Plugin<Project> {
         // Get the inspequte availability check
         val inspequteAvailable = project.providers.of(InspequteAvailableValueSource::class.java) {}
 
-        // Configure tasks for all source sets
-        project.afterEvaluate {
-            val sourceSets = project.extensions.getByName("sourceSets") as org.gradle.api.tasks.SourceSetContainer
+        // Configure tasks for all source sets using lazy configuration APIs
+        project.plugins.withType(JavaBasePlugin::class.java).configureEach {
+            val javaExtension = project.extensions.getByType<JavaPluginExtension>()
             
-            sourceSets.forEach { sourceSet ->
-                configureInspequteForSourceSet(project, sourceSet, inspequteAvailable)
-            }
+            javaExtension.sourceSets.configureEach(object : Action<SourceSet> {
+                override fun execute(sourceSet: SourceSet) {
+                    configureInspequteForSourceSet(project, sourceSet, inspequteAvailable)
+                }
+            })
         }
     }
 
@@ -35,31 +41,30 @@ class InspequtePlugin : Plugin<Project> {
         sourceSet: SourceSet,
         inspequteAvailable: Provider<Boolean>
     ) {
-        val sourceSetName = sourceSet.name
-        val capitalizedName = sourceSetName.replaceFirstChar { it.uppercase() }
+        // Generate proper task names using SourceSet.getTaskName
+        val writeInputsTaskName = sourceSet.getTaskName("writeInspequteInputs", null)
+        val inspequteTaskName = sourceSet.getTaskName("inspequte", null)
         
         // Task to write inspequte input files
-        val writeInputsTask = project.tasks.register<WriteInspequteInputsTask>(
-            "writeInspequteInputs$capitalizedName"
-        ) {
+        val writeInputsTask = project.tasks.register<WriteInspequteInputsTask>(writeInputsTaskName) {
             this.sourceSet.set(sourceSet)
-            dependsOn(project.tasks.named("${sourceSetName}Classes"))
+            dependsOn(project.tasks.named(sourceSet.classesTaskName))
             group = "verification"
-            description = "Writes inspequte input files for $sourceSetName source set"
+            description = "Writes inspequte input files for ${sourceSet.name} source set"
         }
 
         // Task to run inspequte
-        project.tasks.register<Exec>("inspequte$capitalizedName") {
+        project.tasks.register<Exec>(inspequteTaskName) {
             dependsOn(writeInputsTask)
             group = "verification"
-            description = "Runs inspequte analysis for $sourceSetName source set"
+            description = "Runs inspequte analysis for ${sourceSet.name} source set"
             
             val buildDir = project.layout.buildDirectory
             inputs.files(
-                buildDir.file("inspequte/$sourceSetName/inputs.txt"),
-                buildDir.file("inspequte/$sourceSetName/classpath.txt")
+                buildDir.file("inspequte/${sourceSet.name}/inputs.txt"),
+                buildDir.file("inspequte/${sourceSet.name}/classpath.txt")
             )
-            outputs.file(buildDir.file("inspequte-$sourceSetName.sarif"))
+            outputs.file(buildDir.file("inspequte-${sourceSet.name}.sarif"))
 
             // Validate that inspequte is available
             doFirst {
@@ -74,11 +79,11 @@ class InspequtePlugin : Plugin<Project> {
             commandLine(
                 "inspequte",
                 "--input",
-                "@${buildDir.get()}/inspequte/$sourceSetName/inputs.txt",
+                "@${buildDir.get()}/inspequte/${sourceSet.name}/inputs.txt",
                 "--classpath",
-                "@${buildDir.get()}/inspequte/$sourceSetName/classpath.txt",
+                "@${buildDir.get()}/inspequte/${sourceSet.name}/classpath.txt",
                 "--output",
-                "${buildDir.get()}/inspequte-$sourceSetName.sarif"
+                "${buildDir.get()}/inspequte-${sourceSet.name}.sarif"
             )
         }
     }
