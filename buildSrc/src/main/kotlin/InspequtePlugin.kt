@@ -76,14 +76,15 @@ class InspequtePlugin : Plugin<Project> {
                 }
             }
 
+            val buildDirPath = buildDir.get()
             commandLine(
                 "inspequte",
                 "--input",
-                "@${buildDir.get()}/inspequte/${sourceSet.name}/inputs.txt",
+                "@$buildDirPath/inspequte/${sourceSet.name}/inputs.txt",
                 "--classpath",
-                "@${buildDir.get()}/inspequte/${sourceSet.name}/classpath.txt",
+                "@$buildDirPath/inspequte/${sourceSet.name}/classpath.txt",
                 "--output",
-                "${buildDir.get()}/inspequte-${sourceSet.name}.sarif"
+                "$buildDirPath/inspequte-${sourceSet.name}.sarif"
             )
         }
     }
@@ -102,14 +103,7 @@ abstract class WriteInspequteInputsTask : DefaultTask() {
 
     @get:InputFiles
     val runtimeClasspath: org.gradle.api.file.FileCollection
-        get() {
-            val sourceSetName = sourceSet.get().name
-            return if (sourceSetName == "main") {
-                project.configurations.getByName("runtimeClasspath")
-            } else {
-                project.configurations.getByName("${sourceSetName}RuntimeClasspath")
-            }
-        }
+        get() = sourceSet.get().runtimeClasspath
 
     @get:OutputFile
     val inputsFile: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>
