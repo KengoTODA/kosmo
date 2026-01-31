@@ -64,15 +64,21 @@ class InspequtePlugin : Plugin<Project> {
             )
             outputs.file(buildDir.file("inspequte/${sourceSet.name}/report.sarif"))
 
-            // Configure command line lazily to avoid configuration-time evaluation
-            doFirst {
-                if (!inspequteAvailable.get()) {
-                    throw GradleException(
+            // Skip task if inspequte is not available, with a warning
+            onlyIf {
+                val available = inspequteAvailable.get()
+                if (!available) {
+                    project.logger.warn(
+                        "Skipping inspequte analysis for ${sourceSet.name}: " +
                         "inspequte executable not found in PATH. " +
-                            "Please install it using: cargo install inspequte --locked"
+                        "Install it using: cargo install inspequte --locked"
                     )
                 }
-                
+                available
+            }
+
+            // Configure command line lazily to avoid configuration-time evaluation
+            doFirst {
                 val inputsPath = buildDir.file("inspequte/${sourceSet.name}/inputs.txt")
                     .get()
                     .asFile
@@ -99,7 +105,7 @@ class InspequtePlugin : Plugin<Project> {
 
         // Make the check task depend on inspequte task
         // The check task is guaranteed to exist because we're inside withType(JavaBasePlugin)
-        project.tasks.named("check") {
+        project.tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
             dependsOn(inspequteTask)
         }
     }
