@@ -53,6 +53,31 @@ tasks.register<Exec>("inspequte") {
         buildDir.file("inspequte/classpath.txt"),
     )
     outputs.file(buildDir.file("inspequte.sarif"))
+
+    // Validate that inspequte is available
+    doFirst {
+        try {
+            val checkCommand =
+                if (System.getProperty("os.name").lowercase().contains("win")) {
+                    arrayOf("where", "inspequte")
+                } else {
+                    arrayOf("which", "inspequte")
+                }
+            val process = Runtime.getRuntime().exec(checkCommand)
+            if (process.waitFor() != 0) {
+                throw GradleException(
+                    "inspequte executable not found in PATH. " +
+                        "Please install it using: cargo install inspequte --locked",
+                )
+            }
+        } catch (e: Exception) {
+            throw GradleException(
+                "Failed to verify inspequte installation: ${e.message}\n" +
+                    "Please install inspequte using: cargo install inspequte --locked",
+            )
+        }
+    }
+
     commandLine(
         "inspequte",
         "--input",
