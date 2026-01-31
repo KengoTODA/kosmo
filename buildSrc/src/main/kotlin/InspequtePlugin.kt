@@ -2,17 +2,13 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.register
-import java.io.File
 
 /**
  * Plugin that configures inspequte tasks for all source sets in a project.
