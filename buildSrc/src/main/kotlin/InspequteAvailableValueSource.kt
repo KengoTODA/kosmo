@@ -2,6 +2,7 @@ import org.gradle.api.provider.ValueSource
 import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 import javax.inject.Inject
 
 /**
@@ -16,7 +17,7 @@ abstract class InspequteAvailableValueSource : ValueSource<Boolean, ValueSourceP
         return try {
             val stdout = ByteArrayOutputStream()
             val stderr = ByteArrayOutputStream()
-            val command = if (System.getProperty("os.name").lowercase().contains("win")) {
+            val command = if (System.getProperty("os.name").lowercase(Locale.ENGLISH).contains("win")) {
                 listOf("where", "inspequte")
             } else {
                 listOf("which", "inspequte")

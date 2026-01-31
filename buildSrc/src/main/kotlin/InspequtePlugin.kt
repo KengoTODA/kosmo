@@ -28,11 +28,9 @@ class InspequtePlugin : Plugin<Project> {
         project.plugins.withType(JavaBasePlugin::class.java).configureEach {
             val javaExtension = project.extensions.getByType<JavaPluginExtension>()
             
-            javaExtension.sourceSets.configureEach(object : Action<SourceSet> {
-                override fun execute(sourceSet: SourceSet) {
-                    configureInspequteForSourceSet(project, sourceSet, inspequteAvailable)
-                }
-            })
+            javaExtension.sourceSets.configureEach {
+                configureInspequteForSourceSet(project, this, inspequteAvailable)
+            }
         }
     }
 
