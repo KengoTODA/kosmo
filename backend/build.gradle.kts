@@ -26,14 +26,22 @@ tasks.register("writeInspequteInputs") {
     val buildDir = layout.buildDirectory
     outputs.files(
         buildDir.file("inspequte/inputs.txt"),
-        buildDir.file("inspequte/classpath.txt")
+        buildDir.file("inspequte/classpath.txt"),
     )
     doLast {
         val inputsFile = buildDir.file("inspequte/inputs.txt").get().asFile
         val classpathFile = buildDir.file("inspequte/classpath.txt").get().asFile
         inputsFile.parentFile.mkdirs()
-        inputsFile.writeText(mainSourceSet.output.classesDirs.files.joinToString("\n"))
-        classpathFile.writeText(configurations.runtimeClasspath.get().files.joinToString("\n"))
+        inputsFile.writeText(
+            mainSourceSet.output.classesDirs.files
+                .joinToString("\n"),
+        )
+        classpathFile.writeText(
+            configurations.runtimeClasspath
+                .get()
+                .files
+                .joinToString("\n"),
+        )
     }
 }
 
@@ -42,13 +50,16 @@ tasks.register<Exec>("inspequte") {
     val buildDir = layout.buildDirectory
     inputs.files(
         buildDir.file("inspequte/inputs.txt"),
-        buildDir.file("inspequte/classpath.txt")
+        buildDir.file("inspequte/classpath.txt"),
     )
     outputs.file(buildDir.file("inspequte.sarif"))
     commandLine(
         "inspequte",
-        "--input", "@${buildDir.get()}/inspequte/inputs.txt",
-        "--classpath", "@${buildDir.get()}/inspequte/classpath.txt",
-        "--output", "${buildDir.get()}/inspequte.sarif"
+        "--input",
+        "@${buildDir.get()}/inspequte/inputs.txt",
+        "--classpath",
+        "@${buildDir.get()}/inspequte/classpath.txt",
+        "--output",
+        "${buildDir.get()}/inspequte.sarif",
     )
 }
