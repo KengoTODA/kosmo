@@ -87,7 +87,8 @@ class InspequtePlugin : Plugin<Project> {
         }
 
         // Make the check task depend on inspequte task
-        project.tasks.named("check").configure {
+        // The check task is guaranteed to exist because we're inside withType(JavaBasePlugin)
+        project.tasks.named("check") {
             dependsOn(inspequteTask)
         }
     }
