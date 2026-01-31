@@ -4,5 +4,13 @@
     "config:best-practices"
   ],
   "automerge": true,
-  "automergeType": "pr"
+  "automergeType": "pr",
+  "automergeStrategy": "squash",
+  "packageRules": [
+    {
+      "description": "Disable automerge for major updates",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
 }
