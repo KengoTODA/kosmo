@@ -5,7 +5,7 @@
   ],
   "automerge": true,
   "automergeType": "pr",
-  "automergeStrategy": "squash",
+  "automergeStrategy": "rebase",
   "packageRules": [
     {
       "description": "Disable automerge for major updates",
