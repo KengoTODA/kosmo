@@ -95,34 +95,52 @@ abstract class WriteInspequteInputsTask : DefaultTask() {
     @get:org.gradle.api.tasks.Internal
     abstract val sourceSet: org.gradle.api.provider.Property<SourceSet>
 
+    @get:InputFiles
+    val classDirectories: org.gradle.api.file.FileCollection
+        get() = sourceSet.get().output.classesDirs
+
+    @get:InputFiles
+    val runtimeClasspath: org.gradle.api.file.FileCollection
+        get() {
+            val sourceSetName = sourceSet.get().name
+            return if (sourceSetName == "main") {
+                project.configurations.getByName("runtimeClasspath")
+            } else {
+                project.configurations.getByName("${sourceSetName}RuntimeClasspath")
+            }
+        }
+
+    @get:OutputFile
+    val inputsFile: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>
+        get() {
+            val sourceSetName = sourceSet.get().name
+            return project.layout.buildDirectory.file("inspequte/$sourceSetName/inputs.txt")
+        }
+
+    @get:OutputFile
+    val classpathFile: org.gradle.api.provider.Provider<org.gradle.api.file.RegularFile>
+        get() {
+            val sourceSetName = sourceSet.get().name
+            return project.layout.buildDirectory.file("inspequte/$sourceSetName/classpath.txt")
+        }
+
     @TaskAction
     fun writeInputs() {
-        val ss = sourceSet.get()
-        val sourceSetName = ss.name
-        val buildDir = project.layout.buildDirectory.get().asFile
-        val inspequteDir = File(buildDir, "inspequte/$sourceSetName")
-        inspequteDir.mkdirs()
-
-        val inputsFile = File(inspequteDir, "inputs.txt")
-        val classpathFile = File(inspequteDir, "classpath.txt")
-
-        // Ensure all input directories exist
-        ss.output.classesDirs.files.forEach { it.mkdirs() }
+        val inputsFileObj = inputsFile.get().asFile
+        val classpathFileObj = classpathFile.get().asFile
+        
+        // Create parent directories
+        inputsFileObj.parentFile.mkdirs()
+        classpathFileObj.parentFile.mkdirs()
 
         // Write class directories to inputs.txt
-        inputsFile.writeText(
-            ss.output.classesDirs.files.joinToString("\n")
+        inputsFileObj.writeText(
+            classDirectories.files.joinToString("\n")
         )
 
         // Write classpath to classpath.txt
-        val classpathConfig = if (sourceSetName == "main") {
-            project.configurations.getByName("runtimeClasspath")
-        } else {
-            project.configurations.getByName("${sourceSetName}RuntimeClasspath")
-        }
-        
-        classpathFile.writeText(
-            classpathConfig.files.joinToString("\n")
+        classpathFileObj.writeText(
+            runtimeClasspath.files.joinToString("\n")
         )
     }
 }
