@@ -64,7 +64,7 @@ class InspequtePlugin : Plugin<Project> {
             )
             outputs.file(buildDir.file("inspequte/${sourceSet.name}/report.sarif"))
 
-            // Validate that inspequte is available
+            // Configure command line lazily to avoid configuration-time evaluation
             doFirst {
                 if (!inspequteAvailable.get()) {
                     throw GradleException(
@@ -72,18 +72,18 @@ class InspequtePlugin : Plugin<Project> {
                             "Please install it using: cargo install inspequte --locked"
                     )
                 }
+                
+                val buildDirPath = buildDir.get().asFile.absolutePath
+                commandLine(
+                    "inspequte",
+                    "--input",
+                    "@$buildDirPath/inspequte/${sourceSet.name}/inputs.txt",
+                    "--classpath",
+                    "@$buildDirPath/inspequte/${sourceSet.name}/classpath.txt",
+                    "--output",
+                    "$buildDirPath/inspequte/${sourceSet.name}/report.sarif"
+                )
             }
-
-            val buildDirPath = buildDir.get()
-            commandLine(
-                "inspequte",
-                "--input",
-                "@$buildDirPath/inspequte/${sourceSet.name}/inputs.txt",
-                "--classpath",
-                "@$buildDirPath/inspequte/${sourceSet.name}/classpath.txt",
-                "--output",
-                "$buildDirPath/inspequte/${sourceSet.name}/report.sarif"
-            )
         }
 
         // Make the check task depend on inspequte task
