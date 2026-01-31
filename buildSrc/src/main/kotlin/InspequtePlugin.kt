@@ -52,7 +52,7 @@ class InspequtePlugin : Plugin<Project> {
         }
 
         // Task to run inspequte
-        project.tasks.register<Exec>(inspequteTaskName) {
+        val inspequteTask = project.tasks.register<Exec>(inspequteTaskName) {
             dependsOn(writeInputsTask)
             group = "verification"
             description = "Runs inspequte analysis for ${sourceSet.name} source set"
@@ -84,6 +84,11 @@ class InspequtePlugin : Plugin<Project> {
                 "--output",
                 "$buildDirPath/inspequte-${sourceSet.name}.sarif"
             )
+        }
+
+        // Make the check task depend on inspequte task
+        project.tasks.named("check").configure {
+            dependsOn(inspequteTask)
         }
     }
 }
