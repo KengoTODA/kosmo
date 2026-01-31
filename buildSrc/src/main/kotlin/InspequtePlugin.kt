@@ -132,14 +132,20 @@ abstract class WriteInspequteInputsTask : DefaultTask() {
         inputsFileObj.parentFile.mkdirs()
         classpathFileObj.parentFile.mkdirs()
 
-        // Write class directories to inputs.txt
+        // Write class directories to inputs.txt in a deterministic order
         inputsFileObj.writeText(
-            classDirectories.files.joinToString("\n")
+            classDirectories.files
+                .map { it.absolutePath }
+                .sorted()
+                .joinToString("\n")
         )
 
-        // Write classpath to classpath.txt
+        // Write classpath to classpath.txt in a deterministic order
         classpathFileObj.writeText(
-            runtimeClasspath.files.joinToString("\n")
+            runtimeClasspath.files
+                .map { it.absolutePath }
+                .sorted()
+                .joinToString("\n")
         )
     }
 }
