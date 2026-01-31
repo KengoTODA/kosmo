@@ -32,6 +32,11 @@ tasks.register("writeInspequteInputs") {
         val inputsFile = buildDir.file("inspequte/inputs.txt").get().asFile
         val classpathFile = buildDir.file("inspequte/classpath.txt").get().asFile
         inputsFile.parentFile.mkdirs()
+
+        // Ensure all input directories exist
+        mainSourceSet.output.classesDirs.files
+            .forEach { it.mkdirs() }
+
         inputsFile.writeText(
             mainSourceSet.output.classesDirs.files
                 .joinToString("\n"),
