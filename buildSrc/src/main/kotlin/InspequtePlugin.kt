@@ -62,7 +62,7 @@ class InspequtePlugin : Plugin<Project> {
                 buildDir.file("inspequte/${sourceSet.name}/inputs.txt"),
                 buildDir.file("inspequte/${sourceSet.name}/classpath.txt")
             )
-            outputs.file(buildDir.file("inspequte-${sourceSet.name}.sarif"))
+            outputs.file(buildDir.file("inspequte/${sourceSet.name}/report.sarif"))
 
             // Validate that inspequte is available
             doFirst {
@@ -82,7 +82,7 @@ class InspequtePlugin : Plugin<Project> {
                 "--classpath",
                 "@$buildDirPath/inspequte/${sourceSet.name}/classpath.txt",
                 "--output",
-                "$buildDirPath/inspequte-${sourceSet.name}.sarif"
+                "$buildDirPath/inspequte/${sourceSet.name}/report.sarif"
             )
         }
 
