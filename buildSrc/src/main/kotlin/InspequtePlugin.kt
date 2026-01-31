@@ -48,11 +48,15 @@ class InspequtePlugin : Plugin<Project> {
         ) {
             this.sourceSet.set(sourceSet)
             dependsOn(project.tasks.named("${sourceSetName}Classes"))
+            group = "verification"
+            description = "Writes inspequte input files for $sourceSetName source set"
         }
 
         // Task to run inspequte
         project.tasks.register<Exec>("inspequte$capitalizedName") {
             dependsOn(writeInputsTask)
+            group = "verification"
+            description = "Runs inspequte analysis for $sourceSetName source set"
             
             val buildDir = project.layout.buildDirectory
             inputs.files(
@@ -90,11 +94,6 @@ class InspequtePlugin : Plugin<Project> {
 abstract class WriteInspequteInputsTask : DefaultTask() {
     @get:org.gradle.api.tasks.Internal
     abstract val sourceSet: org.gradle.api.provider.Property<SourceSet>
-
-    init {
-        group = "verification"
-        description = "Writes inspequte input files for analysis"
-    }
 
     @TaskAction
     fun writeInputs() {
