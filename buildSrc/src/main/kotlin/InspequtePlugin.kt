@@ -1,4 +1,4 @@
-import org.gradle.api.Action
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -73,15 +73,26 @@ class InspequtePlugin : Plugin<Project> {
                     )
                 }
                 
-                val buildDirPath = buildDir.get().asFile.absolutePath
+                val inputsPath = buildDir.file("inspequte/${sourceSet.name}/inputs.txt")
+                    .get()
+                    .asFile
+                    .absolutePath
+                val classpathPath = buildDir.file("inspequte/${sourceSet.name}/classpath.txt")
+                    .get()
+                    .asFile
+                    .absolutePath
+                val reportPath = buildDir.file("inspequte/${sourceSet.name}/report.sarif")
+                    .get()
+                    .asFile
+                    .absolutePath
                 commandLine(
                     "inspequte",
                     "--input",
-                    "@$buildDirPath/inspequte/${sourceSet.name}/inputs.txt",
+                    "@$inputsPath",
                     "--classpath",
-                    "@$buildDirPath/inspequte/${sourceSet.name}/classpath.txt",
+                    "@$classpathPath",
                     "--output",
-                    "$buildDirPath/inspequte/${sourceSet.name}/report.sarif"
+                    reportPath
                 )
             }
         }
