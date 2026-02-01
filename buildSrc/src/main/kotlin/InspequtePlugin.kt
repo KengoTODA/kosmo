@@ -83,7 +83,8 @@ class InspequtePlugin : Plugin<Project> {
                 available
             }
 
-            // Use CommandLineArgumentProvider for lazy evaluation of command line arguments
+            // Configure the inspequte executable and use CommandLineArgumentProvider
+            executable("inspequte")
             argumentProviders.add(
                 InspequteArgumentProvider(project.layout.buildDirectory, sourceSet.name)
             )
@@ -119,7 +120,6 @@ class InspequtePlugin : Plugin<Project> {
                 .absolutePath
             
             return listOf(
-                "inspequte",
                 "--input",
                 "@$inputsPath",
                 "--classpath",
