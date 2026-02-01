@@ -5,6 +5,8 @@ import org.gradle.api.Project
 import org.gradle.api.plugins.JavaBasePlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFile
@@ -12,6 +14,11 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskAction
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.register
+import org.gradle.process.CommandLineArgumentProvider
+import org.gradle.process.ExecOperations
+import java.io.ByteArrayOutputStream
+import java.util.Locale
+import javax.inject.Inject
 
 /**
  * Plugin that configures inspequte tasks for all source sets in a project.
@@ -76,36 +83,82 @@ class InspequtePlugin : Plugin<Project> {
                 available
             }
 
-            // Configure command line lazily to avoid configuration-time evaluation
-            doFirst {
-                val inputsPath = buildDir.file("inspequte/${sourceSet.name}/inputs.txt")
-                    .get()
-                    .asFile
-                    .absolutePath
-                val classpathPath = buildDir.file("inspequte/${sourceSet.name}/classpath.txt")
-                    .get()
-                    .asFile
-                    .absolutePath
-                val reportPath = buildDir.file("inspequte/${sourceSet.name}/report.sarif")
-                    .get()
-                    .asFile
-                    .absolutePath
-                commandLine(
-                    "inspequte",
-                    "--input",
-                    "@$inputsPath",
-                    "--classpath",
-                    "@$classpathPath",
-                    "--output",
-                    reportPath
-                )
-            }
+            // Use CommandLineArgumentProvider for lazy evaluation of command line arguments
+            argumentProviders.add(
+                InspequteArgumentProvider(project.layout.buildDirectory, sourceSet.name)
+            )
         }
 
         // Make the check task depend on inspequte task
         // The check task is guaranteed to exist because we're inside withType(JavaBasePlugin)
         project.tasks.named(JavaBasePlugin.CHECK_TASK_NAME) {
             dependsOn(inspequteTask)
+        }
+    }
+
+    /**
+     * CommandLineArgumentProvider for inspequte Exec task.
+     * Provides lazy evaluation of command line arguments.
+     */
+    private class InspequteArgumentProvider(
+        private val buildDir: org.gradle.api.file.DirectoryProperty,
+        private val sourceSetName: String
+    ) : CommandLineArgumentProvider {
+        override fun asArguments(): Iterable<String> {
+            val inputsPath = buildDir.file("inspequte/$sourceSetName/inputs.txt")
+                .get()
+                .asFile
+                .absolutePath
+            val classpathPath = buildDir.file("inspequte/$sourceSetName/classpath.txt")
+                .get()
+                .asFile
+                .absolutePath
+            val reportPath = buildDir.file("inspequte/$sourceSetName/report.sarif")
+                .get()
+                .asFile
+                .absolutePath
+            
+            return listOf(
+                "inspequte",
+                "--input",
+                "@$inputsPath",
+                "--classpath",
+                "@$classpathPath",
+                "--output",
+                reportPath
+            )
+        }
+    }
+}
+
+/**
+ * ValueSource to check if inspequte command is available in PATH.
+ * This is used to validate the environment before running inspequte tasks.
+ */
+abstract class InspequteAvailableValueSource : ValueSource<Boolean, ValueSourceParameters.None> {
+    @get:Inject
+    abstract val execOperations: ExecOperations
+
+    override fun obtain(): Boolean {
+        return try {
+            val stdout = ByteArrayOutputStream()
+            val stderr = ByteArrayOutputStream()
+            val command = if (System.getProperty("os.name").lowercase(Locale.ENGLISH).contains("win")) {
+                listOf("where", "inspequte")
+            } else {
+                listOf("which", "inspequte")
+            }
+            
+            val result = execOperations.exec {
+                commandLine(command)
+                standardOutput = stdout
+                errorOutput = stderr
+                isIgnoreExitValue = true
+            }
+            
+            result.exitValue == 0
+        } catch (e: Exception) {
+            false
         }
     }
 }
