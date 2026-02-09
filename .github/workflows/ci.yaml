@@ -24,7 +24,7 @@ jobs:
           dependency-graph: generate-and-submit
       - run: ./gradlew build testAggregateTestReport --continue
       - name: Install inspequte
-        run: cargo install inspequte --locked
+        uses: KengoTODA/setup-inspequte@main
       - name: Run inspequte
         run: ./gradlew :backend:inspequteMain
       - name: Upload SARIF to GitHub Code Scanning
