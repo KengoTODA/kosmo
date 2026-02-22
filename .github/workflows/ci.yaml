@@ -13,6 +13,8 @@ jobs:
       security-events: write # to upload SARIF results
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Install inspequte # update PATH before Gradle daemon launches
+        uses: KengoTODA/setup-inspequte@main
       - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
         with:
           distribution: temurin
@@ -22,8 +24,6 @@ jobs:
         with:
           dependency-graph: generate-and-submit
       - run: ./gradlew build testAggregateTestReport --continue
-      - name: Install inspequte
-        uses: KengoTODA/setup-inspequte@main
       - name: Run inspequte
         run: ./gradlew :backend:inspequteMain
       - name: Upload SARIF to GitHub Code Scanning
