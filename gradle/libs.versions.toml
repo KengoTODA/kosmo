@@ -1,13 +1,11 @@
 [versions]
 koin = "4.2.2"
-koinKsp = "2.3.1"
 kotest = "6.2.5"
 log4j = "2.26.1"
 slf4j = "2.0.19"
 
 [libraries]
 koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin" }
-koin-ksp-compiler = { module = "io.insert-koin:koin-ksp-compiler", version.ref = "koinKsp" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }

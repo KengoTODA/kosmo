@@ -13,9 +13,3 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     runtimeOnly(libs.log4j.slf4j2.impl)
 }
-
-spotless {
-    kotlin {
-        targetExclude("build/generated/**/*.kt")
-    }
-}
