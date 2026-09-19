@@ -12,6 +12,34 @@ import kotlinx.coroutines.runBlocking
 class LogWriterSpec :
     DescribeSpec({
         describe("LogWriter") {
+            it("flushes each complete record before write returns without closing the writer") {
+                val logDir = tempdir()
+                val txId = TransactionId.create()
+                val entries = listOf(LogEntry.CreateTable(txId, "example\n日本語"), LogEntry.Commit(txId))
+                LogWriter(logDir.toPath()).use { writer ->
+                    entries.forEachIndexed { index, entry ->
+                        writer.write(entry)
+                        val file = logDir.listFiles()!!.single()
+                        file.readText() shouldBe
+                            entries.take(index + 1).joinToString(separator = System.lineSeparator(), postfix = System.lineSeparator()) {
+                                it.toJson()
+                            }
+                    }
+                }
+            }
+            it("flushes records in the new file after rotation without closing the writer") {
+                val logDir = tempdir()
+                val txId = TransactionId.create()
+                LogWriter(logDir.toPath()).use { writer ->
+                    (1..1_000).forEach { writer.write(LogEntry.CreateTable(txId, "table_$it")) }
+                    val commit = LogEntry.Commit(txId)
+                    writer.write(commit)
+
+                    val files = logDir.listFiles()!!.sortedBy { it.name }
+                    files.size shouldBe 2
+                    files.last().readText() shouldBe commit.toJson() + System.lineSeparator()
+                }
+            }
             it("persists all operation types in transaction order") {
                 val logDir = tempdir()
                 val txId = TransactionId.create()

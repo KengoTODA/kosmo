@@ -37,12 +37,14 @@ class LogWriter(
             "wal_$this.json"
         }
 
+    /** Flushes the complete record before returning; this does not force it to durable storage. */
     suspend fun write(logEntry: LogEntry) {
         check(!isClosed.get())
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 writer.write(logEntry.toJson())
                 writer.newLine()
+                writer.flush()
                 if (lines.incrementAndGet() >= MAX_LINES) {
                     rotate()
                 }

@@ -112,8 +112,14 @@ publication to live replica readers require further work.
 ## Next integration steps
 
 The code defines records, transactional catalog behavior, and offline recovery. Storage methods
-do not yet emit logs automatically. Coordinator integration must order operations
-and durable commit records consistently. Log positions, network delivery, live
+do not yet emit logs automatically. Database implementations should own the commit
+and rollback protocols, with `TransactionManager` delegating to them rather than
+implementing a storage-specific commit sequence itself. The current in-memory
+representation needs review before adding these protocols, especially because
+delete destroys row history. Log positions, network delivery, live
 replica publication, and broader transaction concurrency semantics remain separate
-work. `LogWriter` still does not provide a durable commit/force operation; a
-newline is a framing boundary, not a guarantee of durability.
+work. `LogWriter.write()` flushes each complete record, including its newline,
+before returning so another reader can observe it without waiting for rotation
+or close. This flush does not force data to durable storage. A durable
+commit/force operation is still needed; a newline is a framing boundary, not a
+guarantee of durability.
