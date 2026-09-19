@@ -43,9 +43,9 @@ tasks.withType<Test>().configureEach {
 
 spotless {
     kotlinGradle {
-        ktlint()
+        ktlint("1.8.0")
     }
     kotlin {
-        ktlint()
+        ktlint("1.8.0")
     }
 }
