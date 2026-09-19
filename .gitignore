@@ -3,3 +3,6 @@
 
 # Ignore Gradle build output directory
 build
+
+# Ignore Kotlin compiler session state
+.kotlin
