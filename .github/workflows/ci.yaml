@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install inspequte # update PATH before Gradle daemon launches
-        uses: KengoTODA/setup-inspequte@main
+        uses: KengoTODA/setup-inspequte@0f4a42a5fc725bae8d04e24a5517f671c5748950 # main
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
