@@ -3,17 +3,12 @@ import java.util.Scanner
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("com.diffplug.spotless")
-    id("com.google.devtools.ksp")
+    id("io.insert-koin.compiler.plugin")
     id("test-report-aggregation")
 }
 
 fun libs(lib: String) =
     project.extensions.getByType<VersionCatalogsExtension>().named("libs").findLibrary(lib).get()
-
-sourceSets.main {
-    // KSP - To use generated sources
-    java.srcDirs("build/generated/ksp/main/kotlin")
-}
 
 repositories {
     mavenCentral()
@@ -30,8 +25,7 @@ java {
 
 dependencies {
     implementation(libs("koin-core"))
-    compileOnly(libs("koin-annotations"))
-    ksp(libs("koin-ksp-compiler"))
+    implementation(libs("koin-annotations"))
     testImplementation(libs("kotest-assertions-core"))
     testImplementation(libs("kotest-property"))
     testImplementation(libs("kotest-runner-junit5"))

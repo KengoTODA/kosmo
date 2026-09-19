@@ -12,27 +12,27 @@ jobs:
       contents: write # to submit the dependency graph
       security-events: write # to upload SARIF results
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install inspequte # update PATH before Gradle daemon launches
-        uses: KengoTODA/setup-inspequte@main
-      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        uses: KengoTODA/setup-inspequte@0f4a42a5fc725bae8d04e24a5517f671c5748950 # main
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version-file: .java-version
       - name: Build with Gradle
-        uses: gradle/actions/setup-gradle@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
         with:
           dependency-graph: generate-and-submit
       - run: ./gradlew build testAggregateTestReport --continue
       - name: Run inspequte
         run: ./gradlew :backend:inspequteMain
       - name: Upload SARIF to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2 # v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
         with:
           sarif_file: backend/build/inspequte/main/report.sarif
       - name: Upload build reports
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: build-reports
           path: |
