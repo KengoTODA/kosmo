@@ -56,6 +56,7 @@ class LogWriter(
         withContext(Dispatchers.IO) {
             writer.close()
             writer = logDir.resolve(nameFile()).bufferedWriter()
+            lines.set(0)
         }
     }
 

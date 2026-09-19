@@ -33,5 +33,22 @@ class LogWriterSpec :
                 }
                 logDir.listFiles { file -> file.isFile }!!.size shouldBe 2
             }
+            it("preserves entries across multiple log rotations") {
+                val logDir = tempdir()
+                val expected = (1..2_001).map { DummyLogEntry(it).toJson() }
+                LogWriter(logDir.toPath()).use { logWriter ->
+                    runBlocking {
+                        (1..2_001).forEach {
+                            logWriter.write(DummyLogEntry(it))
+                        }
+                    }
+                }
+
+                val files = logDir.listFiles { file -> file.isFile }!!.sortedBy { it.name }
+                files.size shouldBe 3
+                val entries = files.map { it.readLines() }
+                entries.map { it.size } shouldBe listOf(1_000, 1_000, 1)
+                entries.flatten() shouldBe expected
+            }
         }
     })
