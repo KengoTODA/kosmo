@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.withLock
 
 class OnMemoryTable(
     private val name: String,
+    private val creationTransaction: Transaction? = null,
 ) : Table {
     private val lock = Mutex()
     private val map = mutableMapOf<RowId, MutableMap<Transaction, Row>>()
@@ -93,6 +94,9 @@ class OnMemoryTable(
     private fun requireActiveTransaction(tx: Transaction) {
         require(tx.isActive()) {
             "Given $tx is not active"
+        }
+        check(creationTransaction == null || creationTransaction.isVisibleFor(tx)) {
+            "$this is not visible for $tx"
         }
     }
 }

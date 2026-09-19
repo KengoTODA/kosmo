@@ -15,5 +15,7 @@ data class Transaction(
 
     fun isActive(): Boolean = transactionManager.checkActive(this)
 
+    fun isCommitted(): Boolean = transactionManager.isCommitted(id)
+
     override fun toString(): String = "Transaction(id=$id)"
 }

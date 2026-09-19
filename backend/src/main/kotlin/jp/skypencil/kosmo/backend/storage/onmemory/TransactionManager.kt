@@ -28,13 +28,17 @@ class TransactionManager {
     ): Boolean = current > target && committed.contains(target) && committed[target]!! < current
 
     fun commit(tx: Transaction) {
+        require(checkActive(tx)) { "Given $tx is not active" }
         committed[tx.id] = newestActiveTransactions()
         activeTransactions.remove(tx.id)
     }
 
     fun rollback(tx: Transaction) {
+        require(checkActive(tx)) { "Given $tx is not active" }
         activeTransactions.remove(tx.id)
     }
 
     fun checkActive(tx: Transaction): Boolean = activeTransactions.contains(tx.id)
+
+    fun isCommitted(id: TransactionId): Boolean = committed.containsKey(id)
 }

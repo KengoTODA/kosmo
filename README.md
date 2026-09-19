@@ -5,6 +5,8 @@
 Kosmo is a simple Relational Database implemented in Kotlin.
 This product is not developed for production use, just for personal learning.
 
+The [change log design](docs/change-log.md) describes operation records and transactional table creation.
+
 ## Architecture
 
 ```mermaid

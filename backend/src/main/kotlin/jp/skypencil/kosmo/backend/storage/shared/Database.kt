@@ -1,7 +1,15 @@
 package jp.skypencil.kosmo.backend.storage.shared
 
-interface Database {
-    suspend fun findTable(name: String): Table
+import jp.skypencil.kosmo.backend.value.Transaction
 
-    suspend fun createTable(name: String): Table
+interface Database {
+    suspend fun findTable(
+        tx: Transaction,
+        name: String,
+    ): Table
+
+    suspend fun createTable(
+        tx: Transaction,
+        name: String,
+    ): Table
 }
