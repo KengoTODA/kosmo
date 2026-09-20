@@ -19,7 +19,7 @@ class LogReplayer {
 
     suspend fun replay(entries: Flow<LogEntry>): ReplayResult {
         val database = OnMemoryDatabase()
-        val transactions = TransactionManager()
+        val transactions = TransactionManager(database)
         val pending = mutableMapOf<TransactionId, MutableList<LogEntry>>()
         val committed = mutableSetOf<TransactionId>()
 

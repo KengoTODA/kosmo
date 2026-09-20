@@ -1,21 +1,20 @@
 package jp.skypencil.kosmo.backend.value
 
-import jp.skypencil.kosmo.backend.storage.onmemory.TransactionManager
+import jp.skypencil.kosmo.backend.storage.shared.Database
 
-data class Transaction(
+/** A database-owned handle; snapshots and pending changes belong to the database. */
+class Transaction internal constructor(
     val id: TransactionId,
-    private val transactionManager: TransactionManager,
+    internal val owner: Database,
 ) {
-    fun isVisibleFor(another: Transaction): Boolean {
-        check(another.transactionManager == transactionManager) {
-            "$another should be managed by the same TransactionManager with $this"
-        }
-        return id == another.id || (id < another.id && transactionManager.isCommitted(id, another.id))
-    }
+    internal enum class State { ACTIVE, COMMITTED, ABORTED }
 
-    fun isActive(): Boolean = transactionManager.checkActive(this)
+    @Volatile
+    internal var state = State.ACTIVE
 
-    fun isCommitted(): Boolean = transactionManager.isCommitted(id)
+    fun isActive(): Boolean = state == State.ACTIVE
+
+    fun isCommitted(): Boolean = state == State.COMMITTED
 
     override fun toString(): String = "Transaction(id=$id)"
 }

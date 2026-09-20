@@ -4,99 +4,35 @@ import jp.skypencil.kosmo.backend.storage.shared.Table
 import jp.skypencil.kosmo.backend.value.Row
 import jp.skypencil.kosmo.backend.value.RowId
 import jp.skypencil.kosmo.backend.value.Transaction
-import jp.skypencil.kosmo.backend.value.TransactionId
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
-class OnMemoryTable(
+/** Stable table identity. The owning database controls snapshots and atomic publication. */
+class OnMemoryTable internal constructor(
     private val name: String,
-    private val creationTransaction: Transaction? = null,
+    private val database: OnMemoryDatabase,
 ) : Table {
-    private val lock = Mutex()
-    private val map = mutableMapOf<RowId, MutableMap<Transaction, Row>>()
-
     override fun getName(): String = name
-
-    /**
-     * @return the effective [Row] for the specified [TransactionId]. null-able.
-     */
-    private fun snapshotAt(
-        current: Transaction,
-        id: RowId,
-    ): Row? =
-        checkNotNull(map[id])
-            .entries
-            .findLast {
-                it.key.isVisibleFor(current)
-            }?.value
 
     override suspend fun find(
         tx: Transaction,
         id: RowId,
-    ): Row =
-        lock.withLock {
-            requireActiveTransaction(tx)
-            checkNotNull(map[id]) {
-                "$this does not contain $id"
-            }
-            checkNotNull(snapshotAt(tx, id)) {
-                "$this does not contain $id"
-            }
-        }
+    ): Row = database.find(tx, this, id)
 
-    override suspend fun tableScan(tx: Transaction): Sequence<Row> =
-        lock.withLock {
-            requireActiveTransaction(tx)
-            map.entries
-                .mapNotNull {
-                    snapshotAt(tx, it.key)
-                }.asSequence()
-        }
+    override suspend fun tableScan(tx: Transaction): Sequence<Row> = database.scan(tx, this)
 
     override suspend fun insert(
         tx: Transaction,
         row: Row,
-    ) {
-        lock.withLock {
-            requireActiveTransaction(tx)
-            check(map[row.id] == null) {
-                "$this already has $row"
-            }
-            map[row.id] = mutableMapOf(Pair(tx, row))
-        }
-    }
-
-    override suspend fun delete(
-        tx: Transaction,
-        id: RowId,
-    ): Boolean =
-        lock.withLock {
-            requireActiveTransaction(tx)
-            map.remove(id) != null
-        }
+    ) = database.insert(tx, this, row)
 
     override suspend fun update(
         tx: Transaction,
         row: Row,
-    ) {
-        lock.withLock {
-            requireActiveTransaction(tx)
-            val history =
-                checkNotNull(map[row.id]) {
-                    "$this does not contain ${row.id}"
-                }
-            history[tx] = row
-        }
-    }
+    ) = database.update(tx, this, row)
 
-    override fun toString() = "Table(name=$name)"
+    override suspend fun delete(
+        tx: Transaction,
+        id: RowId,
+    ): Boolean = database.delete(tx, this, id)
 
-    private fun requireActiveTransaction(tx: Transaction) {
-        require(tx.isActive()) {
-            "Given $tx is not active"
-        }
-        check(creationTransaction == null || creationTransaction.isVisibleFor(tx)) {
-            "$this is not visible for $tx"
-        }
-    }
+    override fun toString(): String = "Table(name=$name)"
 }

@@ -41,17 +41,23 @@ groups them by transaction ID and applies a transaction only after its
 reader cannot infer rollback merely from the current end of the log; it must
 wait for more records. An explicit abort operation can be added later.
 
-## Transactional table creation
+## In-memory transactions
 
-Both `Database.createTable(tx, name)` and `findTable(tx, name)` require an active
-transaction. A table follows the existing transaction visibility rules: its
-creator can use it immediately, and readers starting after its commit can see
-it. Readers with earlier snapshots cannot. Table handles also check creation
-visibility, preventing a retained handle from bypassing the catalog check.
+`TransactionManager(database)` delegates begin, commit, and rollback to `Database`.
+The database owns snapshots and workspaces; `Transaction` is an identity handle.
+`OnMemoryTable` delegates access to its owning database so all tables share the
+same transaction boundary. Standalone tables and foreign transactions are rejected.
 
-An active or committed creation reserves its table name. A rolled-back creation
-is invisible, and a later creation may replace it with an empty table. A finished
-transaction cannot be committed again to resurrect a rolled-back table.
+At begin, the transaction retains the immutable committed snapshot. Reads overlay
+its own pending row writes and deletions on that snapshot. Table creation is also
+private until commit. Commit merges only the transaction's changes into the latest
+committed state and publishes a new snapshot under the database lock. Rollback
+simply discards its workspace. Old snapshots remain valid while readers hold them.
+`Row.value` is an optional string, allowing updates and recovery to be verified
+with actual values as well as IDs.
+
+At this migration stage active table creators still reserve names, and concurrent
+row write conflicts are not yet rejected. Revision validation is the next step.
 
 ## Offline reading and recovery
 
@@ -90,8 +96,7 @@ The result contains the database, its transaction manager, the committed
 transaction count, and the IDs of discarded transactions. No database is returned
 until the input completes successfully. If a committed batch fails to apply, the
 entire private database is abandoned; this is not an implementation of undo for
-the storage engine. In particular, the existing destructive delete cannot safely
-be rolled back on a live, shared database.
+the storage engine. Normal transaction rollback discards the private workspace.
 
 For example, from a coroutine after the writer has closed:
 
@@ -114,9 +119,7 @@ publication to live replica readers require further work.
 The code defines records, transactional catalog behavior, and offline recovery. Storage methods
 do not yet emit logs automatically. Database implementations should own the commit
 and rollback protocols, with `TransactionManager` delegating to them rather than
-implementing a storage-specific commit sequence itself. The current in-memory
-representation needs review before adding these protocols, especially because
-delete destroys row history. Log positions, network delivery, live
+implementing a storage-specific commit sequence itself. The in-memory implementation uses private workspaces and immutable snapshots. Log positions, network delivery, live
 replica publication, and broader transaction concurrency semantics remain separate
 work. `LogWriter.write()` flushes each complete record, including its newline,
 before returning so another reader can observe it without waiting for rotation

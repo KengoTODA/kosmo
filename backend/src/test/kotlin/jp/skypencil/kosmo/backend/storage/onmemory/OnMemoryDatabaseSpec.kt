@@ -9,8 +9,8 @@ import jp.skypencil.kosmo.backend.value.RowId
 class OnMemoryDatabaseSpec :
     DescribeSpec({
         it("exposes a new table and its rows to its creator and later committed snapshots") {
-            val manager = TransactionManager()
             val database = OnMemoryDatabase()
+            val manager = TransactionManager(database)
             val creator = manager.create()
             val table = database.createTable(creator, "example")
             val row = Row(RowId.create())
@@ -28,8 +28,8 @@ class OnMemoryDatabaseSpec :
         }
 
         it("hides rolled back tables and allows their names to be reused without retaining rows") {
-            val manager = TransactionManager()
             val database = OnMemoryDatabase()
+            val manager = TransactionManager(database)
             val creator = manager.create()
             val oldTable = database.createTable(creator, "example")
             oldTable.insert(creator, Row(RowId.create()))
@@ -45,8 +45,8 @@ class OnMemoryDatabaseSpec :
         }
 
         it("reserves table names for active and committed creators") {
-            val manager = TransactionManager()
             val database = OnMemoryDatabase()
+            val manager = TransactionManager(database)
             val creator = manager.create()
             database.createTable(creator, "example")
             shouldThrow<IllegalArgumentException> { database.createTable(creator, "example") }
@@ -59,8 +59,8 @@ class OnMemoryDatabaseSpec :
         }
 
         it("checks visibility even when the caller retains the table object") {
-            val manager = TransactionManager()
             val database = OnMemoryDatabase()
+            val manager = TransactionManager(database)
             val creator = manager.create()
             val table = database.createTable(creator, "example")
             val other = manager.create()
@@ -72,8 +72,8 @@ class OnMemoryDatabaseSpec :
         }
 
         it("rejects database access through committed transactions") {
-            val manager = TransactionManager()
             val database = OnMemoryDatabase()
+            val manager = TransactionManager(database)
             val tx = manager.create()
             database.createTable(tx, "example")
             manager.commit(tx)
@@ -84,8 +84,8 @@ class OnMemoryDatabaseSpec :
         }
 
         it("cannot publish a rolled back table by committing its old transaction") {
-            val manager = TransactionManager()
             val database = OnMemoryDatabase()
+            val manager = TransactionManager(database)
             val tx = manager.create()
             database.createTable(tx, "example")
             manager.rollback(tx)

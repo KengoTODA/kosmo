@@ -1,44 +1,15 @@
 package jp.skypencil.kosmo.backend.storage.onmemory
 
+import jp.skypencil.kosmo.backend.storage.shared.Database
 import jp.skypencil.kosmo.backend.value.Transaction
-import jp.skypencil.kosmo.backend.value.TransactionId
 
-class TransactionManager {
-    private val activeTransactions: MutableSet<TransactionId> = sortedSetOf()
+/** Entry points delegate transaction protocols to the selected database implementation. */
+class TransactionManager(
+    private val database: Database,
+) {
+    suspend fun create(): Transaction = database.beginTransaction()
 
-    /**
-     * key: the committed transaction
-     * value: the newest transaction at the commit
-     */
-    private val committed: MutableMap<TransactionId, TransactionId> = mutableMapOf()
+    suspend fun commit(tx: Transaction) = database.commit(tx)
 
-    private fun newestActiveTransactions() = activeTransactions.last()
-
-    fun create(): Transaction {
-        val id =
-            TransactionId.create().also {
-                activeTransactions.add(it)
-            }
-        return Transaction(id, this)
-    }
-
-    fun isCommitted(
-        target: TransactionId,
-        current: TransactionId,
-    ): Boolean = current > target && committed.contains(target) && committed[target]!! < current
-
-    fun commit(tx: Transaction) {
-        require(checkActive(tx)) { "Given $tx is not active" }
-        committed[tx.id] = newestActiveTransactions()
-        activeTransactions.remove(tx.id)
-    }
-
-    fun rollback(tx: Transaction) {
-        require(checkActive(tx)) { "Given $tx is not active" }
-        activeTransactions.remove(tx.id)
-    }
-
-    fun checkActive(tx: Transaction): Boolean = activeTransactions.contains(tx.id)
-
-    fun isCommitted(id: TransactionId): Boolean = committed.containsKey(id)
+    suspend fun rollback(tx: Transaction) = database.rollback(tx)
 }
