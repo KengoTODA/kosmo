@@ -3,6 +3,8 @@ package jp.skypencil.kosmo.backend.wal
 import jp.skypencil.kosmo.backend.storage.onmemory.OnMemoryDatabase
 import jp.skypencil.kosmo.backend.storage.onmemory.TransactionManager
 import jp.skypencil.kosmo.backend.storage.shared.Database
+import jp.skypencil.kosmo.backend.value.CommitFailure
+import jp.skypencil.kosmo.backend.value.CommitResult
 import jp.skypencil.kosmo.backend.value.LogEntry
 import jp.skypencil.kosmo.backend.value.Transaction
 import jp.skypencil.kosmo.backend.value.TransactionId
@@ -14,11 +16,15 @@ import org.slf4j.LoggerFactory
  * Rebuilds a fresh database from a finite stream, publishing it only on successful completion.
  * Stream completion means the end of recovery, not a temporary network disconnection.
  */
-class LogReplayer {
+class LogReplayer internal constructor(
+    private val createDatabase: () -> Database,
+) {
+    constructor() : this({ OnMemoryDatabase() })
+
     private val logger = LoggerFactory.getLogger(LogReplayer::class.java)
 
     suspend fun replay(entries: Flow<LogEntry>): ReplayResult {
-        val database = OnMemoryDatabase()
+        val database = createDatabase()
         val transactions = TransactionManager(database)
         val pending = mutableMapOf<TransactionId, MutableList<LogEntry>>()
         val committed = mutableSetOf<TransactionId>()
@@ -28,16 +34,25 @@ class LogReplayer {
             when (entry) {
                 is LogEntry.Commit -> {
                     val tx = transactions.create()
-                    try {
-                        pending.remove(entry.txId).orEmpty().forEach { apply(database, tx, it) }
-                        transactions.commit(tx)
-                    } catch (cause: CancellationException) {
-                        throw cause
-                    } catch (cause: Exception) {
-                        // The database is private to this replay; never expose partially applied recovery.
-                        throw LogReplayException(entry.txId, cause)
+                    val result =
+                        try {
+                            pending.remove(entry.txId).orEmpty().forEach { apply(database, tx, it) }
+                            transactions.commit(tx)
+                        } catch (cause: CancellationException) {
+                            throw cause
+                        } catch (cause: Exception) {
+                            // The database is private to this replay; never expose partially applied recovery.
+                            throw LogReplayException(entry.txId, cause)
+                        }
+                    when (result) {
+                        CommitResult.Committed -> committed.add(entry.txId)
+
+                        is CommitResult.Aborted -> throw LogReplayException(
+                            entry.txId,
+                            IllegalStateException("Recovered transaction was rejected: ${result.reason}"),
+                            result.reason,
+                        )
                     }
-                    committed.add(entry.txId)
                 }
 
                 is LogEntry.CreateTable,
@@ -97,4 +112,5 @@ data class ReplayResult(
 class LogReplayException(
     val txId: TransactionId,
     cause: Exception,
+    val commitFailure: CommitFailure? = null,
 ) : IllegalStateException("Cannot replay transaction $txId", cause)

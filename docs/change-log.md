@@ -105,9 +105,11 @@ deduplication for network retries requires a future log-position protocol.
 
 The result contains the database, its transaction manager, the committed
 transaction count, and the IDs of discarded transactions. No database is returned
-until the input completes successfully. If a committed batch fails to apply, the
+until the input completes successfully. If a committed batch fails to apply or its database rejects commit, the
 entire private database is abandoned; this is not an implementation of undo for
-the storage engine. Normal transaction rollback discards the private workspace.
+the storage engine. Normal transaction rollback discards the private workspace. A typed commit rejection
+is reported as `LogReplayException` with the original source transaction ID and
+`commitFailure`; recovery stops immediately.
 
 For example, from a coroutine after the writer has closed:
 

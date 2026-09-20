@@ -4,9 +4,14 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.engine.spec.tempdir
 import io.kotest.matchers.shouldBe
+import jp.skypencil.kosmo.backend.storage.onmemory.OnMemoryDatabase
+import jp.skypencil.kosmo.backend.storage.shared.Database
+import jp.skypencil.kosmo.backend.value.CommitFailure
+import jp.skypencil.kosmo.backend.value.CommitResult
 import jp.skypencil.kosmo.backend.value.LogEntry
 import jp.skypencil.kosmo.backend.value.Row
 import jp.skypencil.kosmo.backend.value.RowId
+import jp.skypencil.kosmo.backend.value.Transaction
 import jp.skypencil.kosmo.backend.value.TransactionId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.asFlow
@@ -18,6 +23,57 @@ import kotlin.io.path.writeText
 
 class LogReplayerSpec :
     DescribeSpec({
+        it("reports typed commit failures with the original source transaction ID and stops") {
+            val source = TransactionId.create()
+            val reason = CommitFailure.TableNameConflict("example")
+            var reachedNext = false
+            val replayer =
+                LogReplayer {
+                    val database = OnMemoryDatabase()
+                    object : Database by database {
+                        override suspend fun commit(tx: Transaction): CommitResult {
+                            database.rollback(tx)
+                            return CommitResult.Aborted(reason)
+                        }
+                    }
+                }
+            val input =
+                flow {
+                    emit(LogEntry.CreateTable(source, "example"))
+                    emit(LogEntry.Commit(source))
+                    reachedNext = true
+                    emit(LogEntry.Commit(TransactionId.create()))
+                }
+            val failure = shouldThrow<LogReplayException> { replayer.replay(input) }
+            failure.txId shouldBe source
+            failure.commitFailure shouldBe reason
+            reachedNext shouldBe false
+        }
+
+        it("reconstructs row values across multiple committed updates and rollback tails") {
+            val first = TransactionId.create()
+            val second = TransactionId.create()
+            val tail = TransactionId.create()
+            val row = Row(RowId.create(), "initial")
+            val entries =
+                listOf(
+                    LogEntry.CreateTable(first, "example"),
+                    LogEntry.Insert(first, "example", row),
+                    LogEntry.Commit(first),
+                    LogEntry.Update(second, "example", row.copy(value = "committed")),
+                    LogEntry.Commit(second),
+                    LogEntry.Update(tail, "example", row.copy(value = "unfinished")),
+                )
+            val result = LogReplayer().replay(entries.asFlow())
+            val tx = result.transactions.create()
+            result.database
+                .findTable(tx, "example")
+                .find(tx, row.id)
+                .value shouldBe "committed"
+            result.transactions.commit(tx) shouldBe CommitResult.Committed
+            result.discardedTransactions shouldBe setOf(tail)
+        }
+
         it("recovers a closed log across rotations preserving original row IDs") {
             val directory = tempdir().toPath()
             val txId = TransactionId.create()
