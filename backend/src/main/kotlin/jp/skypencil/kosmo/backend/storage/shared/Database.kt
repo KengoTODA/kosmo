@@ -1,11 +1,12 @@
 package jp.skypencil.kosmo.backend.storage.shared
 
+import jp.skypencil.kosmo.backend.value.CommitResult
 import jp.skypencil.kosmo.backend.value.Transaction
 
 interface Database {
     suspend fun beginTransaction(): Transaction
 
-    suspend fun commit(tx: Transaction)
+    suspend fun commit(tx: Transaction): CommitResult
 
     suspend fun rollback(tx: Transaction)
 

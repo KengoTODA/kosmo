@@ -56,8 +56,19 @@ simply discards its workspace. Old snapshots remain valid while readers hold the
 `Row.value` is an optional string, allowing updates and recovery to be verified
 with actual values as well as IDs.
 
-At this migration stage active table creators still reserve names, and concurrent
-row write conflicts are not yet rejected. Revision validation is the next step.
+Commit validates each written row against the latest commit revision. Deletion
+revisions are retained to detect insert/delete/reinsert ABA changes. Different
+rows can commit independently; a concurrent same-name table creation conflicts
+at commit. A transaction may create a name absent from its own snapshot even if
+another active transaction has also created it.
+
+`CommitResult.Committed` reports success. `CommitResult.Aborted` contains a
+`WriteConflict` or `TableNameConflict` and guarantees that the whole workspace
+was discarded. Retrying requires a new transaction and repeating the reads and
+business decisions, not just another commit call. Foreign/finished handles are
+API misuse and throw exceptions. This is snapshot isolation with write conflict
+checks, not serializable isolation: read/write dependencies and write skew are
+not detected. Row deletion revision metadata is not yet garbage collected.
 
 ## Offline reading and recovery
 

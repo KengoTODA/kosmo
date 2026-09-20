@@ -2,6 +2,8 @@ package jp.skypencil.kosmo.backend.storage.onmemory
 
 import jp.skypencil.kosmo.backend.storage.shared.Database
 import jp.skypencil.kosmo.backend.storage.shared.Table
+import jp.skypencil.kosmo.backend.value.CommitFailure
+import jp.skypencil.kosmo.backend.value.CommitResult
 import jp.skypencil.kosmo.backend.value.Row
 import jp.skypencil.kosmo.backend.value.RowId
 import jp.skypencil.kosmo.backend.value.Transaction
@@ -15,9 +17,11 @@ class OnMemoryDatabase : Database {
     private data class TableData(
         val table: OnMemoryTable,
         val rows: Map<RowId, Row> = emptyMap(),
+        val revisions: Map<RowId, Long> = emptyMap(),
     )
 
     private data class Snapshot(
+        val revision: Long = 0,
         val tables: Map<String, TableData> = emptyMap(),
     )
 
@@ -69,7 +73,7 @@ class OnMemoryDatabase : Database {
     ): Table =
         lock.withLock {
             val work = workspace(tx)
-            require(name !in current.tables && active.values.none { name in it.created }) { "Table $name already exists" }
+            require(name !in work.snapshot.tables && name !in work.created) { "Table $name already exists" }
             OnMemoryTable(name, this).also { work.created[name] = TableData(it) }
         }
 
@@ -135,21 +139,51 @@ class OnMemoryDatabase : Database {
             true
         }
 
-    override suspend fun commit(tx: Transaction) =
+    override suspend fun commit(tx: Transaction): CommitResult =
         lock.withLock {
             val work = workspace(tx)
+            val conflict = conflict(work)
+            if (conflict != null) {
+                active.remove(tx)
+                tx.state = Transaction.State.ABORTED
+                return@withLock CommitResult.Aborted(conflict)
+            }
+            val revision = Math.incrementExact(current.revision)
             val tables = current.tables.toMutableMap()
             tables.putAll(work.created)
             work.writes.forEach { (table, changes) ->
                 val data = checkNotNull(tables[table.getName()])
                 val rows = data.rows.toMutableMap()
-                changes.forEach { (id, row) -> if (row == null) rows.remove(id) else rows[id] = row }
-                tables[table.getName()] = data.copy(rows = rows.toMap())
+                val revisions = data.revisions.toMutableMap()
+                changes.forEach { (id, row) ->
+                    if (row == null) rows.remove(id) else rows[id] = row
+                    // Retain revisions for deletions to detect insert/delete ABA changes.
+                    revisions[id] = revision
+                }
+                tables[table.getName()] = data.copy(rows = rows.toMap(), revisions = revisions.toMap())
             }
-            current = Snapshot(tables.toMap())
+            current = Snapshot(revision, tables.toMap())
             active.remove(tx)
             tx.state = Transaction.State.COMMITTED
+            CommitResult.Committed
         }
+
+    private fun conflict(work: Workspace): CommitFailure? {
+        work.created.keys.forEach { name ->
+            if (name in current.tables) return CommitFailure.TableNameConflict(name)
+        }
+        work.writes.forEach { (table, changes) ->
+            if (table.getName() !in work.created) {
+                val latest = checkNotNull(current.tables[table.getName()])
+                changes.keys.forEach { id ->
+                    if ((latest.revisions[id] ?: 0) > work.snapshot.revision) {
+                        return CommitFailure.WriteConflict(table.getName(), id)
+                    }
+                }
+            }
+        }
+        return null
+    }
 
     override suspend fun rollback(tx: Transaction) =
         lock.withLock {

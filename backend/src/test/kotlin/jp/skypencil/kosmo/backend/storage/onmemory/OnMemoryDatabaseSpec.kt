@@ -3,6 +3,8 @@ package jp.skypencil.kosmo.backend.storage.onmemory
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import jp.skypencil.kosmo.backend.value.CommitFailure
+import jp.skypencil.kosmo.backend.value.CommitResult
 import jp.skypencil.kosmo.backend.value.Row
 import jp.skypencil.kosmo.backend.value.RowId
 
@@ -44,18 +46,21 @@ class OnMemoryDatabaseSpec :
             database.findTable(manager.create(), "example") shouldBe newTable
         }
 
-        it("reserves table names for active and committed creators") {
+        it("detects concurrent table creation at commit and rejects duplicates in its snapshot") {
             val database = OnMemoryDatabase()
             val manager = TransactionManager(database)
             val creator = manager.create()
             database.createTable(creator, "example")
             shouldThrow<IllegalArgumentException> { database.createTable(creator, "example") }
-
             val other = manager.create()
-            shouldThrow<IllegalArgumentException> { database.createTable(other, "example") }
-            manager.commit(creator)
-            shouldThrow<IllegalArgumentException> { database.createTable(other, "example") }
-            shouldThrow<IllegalArgumentException> { database.createTable(manager.create(), "example") }
+            val losingTable = database.createTable(other, "example")
+            manager.commit(creator) shouldBe CommitResult.Committed
+            manager.commit(other) shouldBe CommitResult.Aborted(CommitFailure.TableNameConflict("example"))
+            other.isActive() shouldBe false
+            other.isCommitted() shouldBe false
+            val next = manager.create()
+            shouldThrow<IllegalStateException> { losingTable.tableScan(next) }
+            shouldThrow<IllegalArgumentException> { database.createTable(next, "example") }
         }
 
         it("checks visibility even when the caller retains the table object") {
