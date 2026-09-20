@@ -18,8 +18,8 @@ The transaction manager itself is not serialized.
 | `Delete` | `delete` | `tableName`, `rowId` |
 | `Commit` | `commit` | None |
 
-`Row` currently contains only an ID. When values are added to it, inserts and
-updates must preserve those values as well. IDs are serialized as UUID strings
+`Row` contains an ID and an optional string value. Inserts and updates preserve
+both. IDs are serialized as UUID strings
 inside their value objects, preserving the existing UUID version validation on
 decode. Replay must use the recorded IDs, not generate new ones.
 
@@ -127,15 +127,65 @@ end of recovery and discards pending transactions. Recovery buffers in-flight
 transactions and tracks committed IDs in memory. Memory bounds and incremental
 publication to live replica readers require further work.
 
-## Next integration steps
+## Durable commits
 
-The code defines records, transactional catalog behavior, and offline recovery. Storage methods
-do not yet emit logs automatically. Database implementations should own the commit
-and rollback protocols, with `TransactionManager` delegating to them rather than
-implementing a storage-specific commit sequence itself. The in-memory implementation uses private workspaces and immutable snapshots. Log positions, network delivery, live
-replica publication, and broader transaction concurrency semantics remain separate
-work. `LogWriter.write()` flushes each complete record, including its newline,
-before returning so another reader can observe it without waiting for rotation
-or close. This flush does not force data to durable storage. A durable
-commit/force operation is still needed; a newline is a framing boundary, not a
-guarantee of durability.
+For a fresh database and log directory, pass a writer to the database:
+
+```kotlin
+LogWriter(logDir).use { writer ->
+    val database = OnMemoryDatabase(writer)
+    val transactions = TransactionManager(database)
+    val tx = transactions.create()
+    val table = database.createTable(tx, "example")
+    table.insert(tx, Row(RowId.create(), "value"))
+    when (val result = transactions.commit(tx)) {
+        CommitResult.Committed -> Unit
+        is CommitResult.Aborted -> println(result.reason)
+    }
+}
+```
+
+`TransactionManager` delegates the protocol to `Database`. `OnMemoryDatabase`
+records successful operations in its workspace, retaining their original order
+separately from the net row changes. This matters for insert/delete/reinsert
+sequences. Rollback, rejected commits, and read-only commits emit no WAL records.
+All log records still describe individual operations, not a transaction blob.
+
+Under the database lock, commit validates conflicts and prepares the next
+snapshot before starting I/O. It then calls `TransactionLog.appendTransaction`
+to append the operation records followed by Commit. `LogWriter` flushes each
+record, forces rotated segments before closing them, forces the final segment,
+and syncs directory entries when creating new segments. The filesystem must
+support opening and forcing directories; unsupported environments fail rather
+than silently weaken the contract. Guarantees depend on the underlying storage
+honoring these force requests. Ordinary `write()` only promises flush (although
+rotation also forces its completed segment).
+
+Only after the log append/force succeeds does the database publish its prepared
+snapshot and mark the transaction committed. This initial implementation holds
+the database lock through I/O, so readers and other transactions wait. There is
+no group commit optimization yet.
+
+A log exception does not mean a known rollback: Commit may already be stored.
+The database throws `CommitOutcomeUnknownException`, marks the transaction
+in-doubt, discards other pending work, and rejects further access with
+`DatabaseUnavailableException`. The caller must close the writer and recover
+from the log; it must not blindly retry the transaction. A writer that suffered
+an I/O failure also rejects further writes. Recovery without a log sink avoids
+logging the recovered operations again.
+
+Cancellation while waiting for the database lock leaves the transaction active;
+the caller can explicitly roll it back. Once WAL I/O begins, the save-and-publish
+section is non-cancellable so request cancellation cannot leave a durable Commit
+unpublished in the live database. A cancelled client may still have committed;
+it must not interpret cancellation as proof of rollback.
+
+## Remaining integration work
+
+Log positions, network delivery, live replica publication, and startup/resume
+wiring remain separate work. The current `Coordinator` is still an unused
+bootstrap skeleton. Do not attach a new empty database to an existing history:
+startup must recover the history before enabling new writes. `LogReplayer`
+currently returns an in-memory recovered database without a log sink. Snapshot
+copy costs, unbounded deletion revision metadata, and long-lived transactions
+retaining snapshots are accepted limitations of this learning implementation.

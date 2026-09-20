@@ -7,7 +7,7 @@ class Transaction internal constructor(
     val id: TransactionId,
     internal val owner: Database,
 ) {
-    internal enum class State { ACTIVE, COMMITTED, ABORTED }
+    internal enum class State { ACTIVE, COMMITTED, ABORTED, IN_DOUBT }
 
     @Volatile
     internal var state = State.ACTIVE
